@@ -1,92 +1,62 @@
 use std::str::{FromStr, Chars};
 
-struct Packet<'a> {
-    underlying: &'a str
-}
+mod packet;
+use packet::{Packet, PacketIter, PacketIterResult};
 
-impl<'a> Packet<'a> {
-    fn new(str: &'a str) -> Packet<'a> {
-        Packet {
-            underlying: str
-        }
-    }
+fn print_packet<'a>(fields_iter: PacketIter<'a>) {
     
-    fn iter(&self) -> PacketIter {
-        PacketIter {
-            packet: &self,
-            offset: 0
-        }
-    }
-}
-
-impl<'a> Ord for Packet<'a> {
-    fn cmp(&self, other: &Self) -> std::cmp::Ordering {
-
-    }
-}
-
-impl<'a> PartialOrd for Packet<'a> {
-    fn partial_cmp(&self, other: &Self) -> Option<std::cmp::Ordering> {
-        Some(self.cmp(other))
-    }
-}
-
-impl<'a> PartialEq for Packet<'a> {
-    fn eq(&self, other: &Self) -> bool {
-        true
-    }
-}
-
-impl<'a> Eq for Packet<'a> {}
-
-enum PacketField {
-    Number(u32),
-    List(usize)
-}
-
-struct PacketIter<'a> {
-    packet: &'a Packet<'a>,
-    offset: usize
-}
-
-impl<'a> Iterator for PacketIter<'a> {
-    type Item = PacketField;
-
-    fn next(&mut self) -> Option<Self::Item> {
-        let start = self.offset;
-        let mut length = 0;
-        loop {
-
-            length += 1;
-            self.offset += 1;
-        }
-
-        match length {
-            0 => None,
-            i => {
-
+    for field in fields_iter {
+        //print!("|*");
+        match field {
+            PacketIterResult::Number(n) => print!("{n},"),
+            PacketIterResult::List(new_iter) => {
+                print!("[");
+                print_packet(new_iter);
+                print!("],")
             }
         }
-    }
+    } 
 }
 
 fn main() {
-    let input = include_str!("sample_input.txt").lines();
+    let input = include_str!("input.txt").lines();
     let mut input_iter = input.into_iter();
 
-    let valid_indices = vec![0; 0];
-    let mut current_index = 0;
+    let mut result = 0;
+    let mut index = 1;
     loop {
         let left = Packet::new(input_iter.next().unwrap());
         let right = Packet::new(input_iter.next().unwrap());
 
-
+        let ordering = left.partial_cmp(&right);
+        if ordering == Some(std::cmp::Ordering::Less) || ordering == Some(std::cmp::Ordering::Equal) {
+            result += index;
+        }
+        index += 1;
 
         let possible_new_line = input_iter.next();
         if possible_new_line.is_none() {
             break;
         }
-        current_index += 1;
     }
+    println!("The sum of the valid pair indices is: {}", result);
+
+    let mut lines_for_second_part: Vec<_> = include_str!("input.txt").lines().filter(|x| !x.is_empty()).collect();
+    let start_marker = "[[2]]";
+    let end_marker = "[[6]]";
+    lines_for_second_part.push(start_marker);
+    lines_for_second_part.push(end_marker);
+
+    lines_for_second_part.sort_by(|a, b| {
+        let left = Packet::new(*a);
+        let right = Packet::new(*b);
+
+        left.partial_cmp(&right).unwrap()
+    });
+
+    let start_index = lines_for_second_part.iter().position((|x| *x == start_marker)).unwrap() + 1;
+    let end_index = lines_for_second_part.iter().position((|x| *x == end_marker)).unwrap() + 1;
+
+    println!("Decryption Key: {}", start_index * end_index)   
 }
 
